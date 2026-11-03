@@ -1,0 +1,6 @@
+/turtle1/pose:
+  history: keep_last
+  depth: 10
+  reliability: best_effort
+  durability: volatile
+
