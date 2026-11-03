@@ -16,33 +16,14 @@ Uso de asistentes de IA (para qué, o «ninguno»): Creación de entorno y git /
 
 | Campo | Contenido |
 |---|---|
-| Síntoma (lo que se observa) |El bag tiene una duración de 39,010 segundos y contiene 120 mensajes 
-repartidos entre /distancia, /distancia filtrada y /cmd vel demo, con 40 mensajes
- en cada topic.|
-| Hipótesis (escrita antes de ejecutar nada) |Sospecho que se trata de un fallo dinámico
- provocado por una frecuencia de publicación demasiado baja en el sensor de distancia. 
-El sistema debería funcionar a 10 Hz, pero el número de mensajes sugiere
- un ritmo cercano a 1 Hz en toda la cadena.
-Como los tres topics tienen el mismo número de mensajes,
-inicialmente no parece existir una pérdida adicional en el filtro o el controlador. 
-Espero que el análisis confirme un hallazgo RITMO_BAJO en el origen, aunque todavía
- no puedo asegurar la causa exacta. |
+| Síntoma (lo que se observa) |El bag tiene una duración de 39,010 segundos y contiene 120 mensajes repartidos entre /distancia, /distancia filtrada y /cmd vel demo, con 40 mensajesen cada topic.|
+| Hipótesis (escrita antes de ejecutar nada) |Sospecho que se trata de un fallo dinámico provocado por una frecuencia de publicación demasiado baja en el sensor de distancia. El sistema debería funcionar a 10 Hz, pero el número de mensajes sugiere un ritmo cercano a 1 Hz en toda la cadena.Como los tres topics tienen el mismo número de mensajes,inicialmente no parece existir una pérdida adicional en el filtro o el controlador. Espero que el análisis confirme un hallazgo RITMO_BAJO en el origen, aunque todavía no puedo asegurar la causa exacta. |
 | Comando(s) | `python3 analiza_bag.py bags/caso_5_casa --esperado /distancia=10 --png informe_caso5.png` |
-| Evidencia (salida / gráfica) | La herramienta detectó RITMO_BAJO en /distancia, con 1,00 Hz
- medidos frente a 10 Hz esperados. Los tres topics presentan la misma frecuencia.
- Las latencias medianas son 0,002 s en /distancia y 0,007 s en /distancia_filtrada. |
-| Eslabón donde se rompe |El problema comienza en el origen de la cadena, antes del procesamiento 
-de /distancia. |
-| Familia (estructural / dinámico / tiempo / origen) |Es un fallo de comportamiento dinámico,
- concretamente de frecuencia de publicación. |
-| Causa raíz probable |El nodo productor de /distancia podría tener configurada una frecuencia de 
-publicación de 1 Hz en lugar de 10 Hz, por ejemplo, debido a un temporizador incorrecto o una limitación
- del sensor. El bag permite localizar el síntoma, pero no confirmar cuál de esas causas lo produce. |
-| Arreglo concreto y cómo comprobarlo | Revisar el temporizador o parámetro de frecuencia del nodo sensor.
- Si utiliza un temporizador configurado a 1,0 segundos, cambiarlo a 0,1 segundos para conseguir 10 Hz,
- siempre que el hardware lo permita. Después, comprobar las frecuencias con ros2 topic hz /distancia,
- ros2 topic hz /distancia filtrada y ros2 topic hz /cmd vel demo. Finalmente, grabar otro bag y analizarlo
- esperando que los tres topics funcionen aproximadamente a 10 Hz y desaparezca RITMO_BAJO. |
+| Evidencia (salida / gráfica) | La herramienta detectó RITMO_BAJO en /distancia, con 1,00 Hz medidos frente a 10 Hz esperados. Los tres topics presentan la misma frecuencia. Las latencias medianas son 0,002 s en /distancia y 0,007 s en /distancia_filtrada. |
+| Eslabón donde se rompe |El problema comienza en el origen de la cadena, antes del procesamiento de /distancia. |
+| Familia (estructural / dinámico / tiempo / origen) |Es un fallo de comportamiento dinámico, concretamente de frecuencia de publicación. |
+| Causa raíz probable |El nodo productor de /distancia podría tener configurada una frecuencia de publicación de 1 Hz en lugar de 10 Hz, por ejemplo, debido a un temporizador incorrecto o una limitación del sensor. El bag permite localizar el síntoma, pero no confirmar cuál de esas causas lo produce. |
+| Arreglo concreto y cómo comprobarlo | Revisar el temporizador o parámetro de frecuencia del nodo sensor. Si utiliza un temporizador configurado a 1,0 segundos, cambiarlo a 0,1 segundos para conseguir 10 Hz, siempre que el hardware lo permita. Después, comprobar las frecuencias con ros2 topic hz /distancia, ros2 topic hz /distancia filtrada y ros2 topic hz /cmd vel demo. Finalmente, grabar otro bag y analizarlo esperando que los tres topics funcionen aproximadamente a 10 Hz y desaparezca RITMO_BAJO. |
 
 ¿Qué os dice el grafo del sistema y qué os dice el bag? (pista: comparad con el caso D de la S7)
 El grafo permite visualizar qué nodos y topics forman el sistema y cómo están conectados,
@@ -67,11 +48,51 @@ La frecuencia esperada debería estar definida en los requisitos del sistema y d
 
 ## Ejercicio 2 — Mis propios bags
 
-Bags entregados (en `bags/`, nombres que empiezan por `mi_`): <<RELLENAR>>
-Cómo los generé (comandos): <<RELLENAR>>
+Bags entregados (en `bags/`, nombres que empiezan por `mi_`):
+bags/mi_sano: sistema funcionando correctamente.
+
+bags/mi_hueco: sistema con interrupción de mensajes entre los segundos 10 y 14.
+
+bags/mi_hueco_float32: mismo fallo, pero utilizando mensajes Float32 sin cabecera.
+
+Cómo los generé (comandos):
+import simulador_bags as sim
+
+sim.generar('mi_sano', 'bags')
+sim.generar('mi_hueco', 'bags', hueco=(10, 14))
+sim.generar('mi_hueco_float32', 'bags',
+            hueco=(10, 14), tipo_mensaje='Float32')
+
+Hipótesis previas al análisis:
+
+1. Bag mi_sano: contiene 400 mensajes por topic en aproximadamente 40 segundos. Espero obtener una frecuencia cercana a 10 Hz y el resultado TODO_OK, sin errores de ritmo, latencia ni huecos.
+
+2. Bag mi_hueco: contiene 360 mensajes por topic, 40 menos que el sistema sano. Sospecho que existe una interrupción de aproximadamente cuatro segundos. Espero que la herramienta detecte HUECOS y permita identificar dónde comienza la interrupción.
+
+3. Bag mi_hueco_float32: contiene también 360 mensajes por topic, pero /distancia y /distancia_filtrada utilizan mensajes Float32 sin cabecera. Espero detectar la interrupción mediante los tiempos de grabación, pero no poder calcular la latencia basada en header.stamp.
 
 Tabla comparativa sano / con fallo (ritmos, latencia, hallazgos): <<RELLENAR>>
+| Característica | mi_sano | mi_hueco | mi_hueco_float32 |
+|---|---|---|---|
+| Tipo de mensaje de distancia | Range | Range | Float32 |
+| Mensajes por topic | 400 | 360 | 360 |
+| Frecuencia media | 10,00 Hz | 9,00 Hz | 9,00 Hz |
+| Intervalo máximo sin mensajes | 0,10 s | 4,10 s | 4,10 s |
+| Latencia mediana /distancia | 0,002 s | 0,002 s | No disponible |
+| Latencia mediana /distancia_filtrada | 0,007 s | 0,007 s | No disponible |
+| Hallazgos | TODO_OK | HUECOS y HUECO_ORIGEN | HUECOS y HUECO_ORIGEN |
 
+**Interpretación de los resultados:**
+
+El bag sano presenta 400 mensajes por topic y una frecuencia de 10 Hz, por lo que la herramienta devuelve TODO_OK.
+
+En los dos bags con fallo aparecen 360 mensajes por topic y una interrupción de 4,1 segundos entre los segundos 10,0 y 14,1. La herramienta detecta HUECOS en los tres topics y señala /distancia como origen de la interrupción.
+
+El problema se clasifica como un fallo de origen aguas arriba que afecta al comportamiento temporal del sistema. El filtro y el controlador también dejan de recibir datos durante ese intervalo.
+
+La frecuencia media disminuye a 9 Hz porque faltan 40 mensajes, aunque fuera del hueco los mensajes mantienen su periodicidad normal.
+
+Las latencias en el bag Range son pequeñas y similares a las del sistema sano, por lo que no se observa un problema de retraso prolongado.
 **¿Qué no puede medir la herramienta con mensajes sin cabecera (`Float32`)? ¿Por qué?** <<RELLENAR>>
 
 ## Ejercicio 3 — Extensión de la herramienta
