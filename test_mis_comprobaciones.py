@@ -63,9 +63,44 @@ class PruebasFrames(unittest.TestCase):
         self.assertIn('b', h[0].detalle)
 
 
+
 class PruebasPropias(unittest.TestCase):
-    """TU TRABAJO: anade aqui al menos dos pruebas nuevas (casos limite, otro topic, tu propio fallo...)."""
-    pass
+
+    def test_valores_exactamente_en_los_limites(self):
+        """Los valores minimo y maximo deben ser validos."""
+
+        muestras = [
+            m(0.0, 0.02),
+            m(1.0, 4.0)
+        ]
+
+        resultado = mc.comprobar_rangos(muestras, '/distancia')
+
+        self.assertEqual(resultado, [])
+
+    def test_varios_errores_y_intervalo_temporal(self):
+        """Dos valores invalidos deben generar un solo hallazgo."""
+
+        muestras = [
+            m(1.5, 4.7),
+            m(3.0, -0.2),
+            m(4.0, 2.0)
+        ]
+
+        resultado = mc.comprobar_rangos(muestras, '/sensor_prueba')
+
+        self.assertEqual(len(resultado), 1)
+
+        hallazgo = resultado[0]
+
+        self.assertEqual(hallazgo.severidad, 'ERROR')
+        self.assertEqual(hallazgo.codigo, 'RANGO_FUERA')
+        self.assertEqual(hallazgo.topic, '/sensor_prueba')
+
+        self.assertIn('2 muestras', hallazgo.detalle)
+        self.assertIn('1.50', hallazgo.detalle)
+        self.assertIn('3.00', hallazgo.detalle)
+
 
 
 if __name__ == '__main__':
