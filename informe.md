@@ -71,7 +71,7 @@ Hipótesis previas al análisis:
 
 3. Bag mi_hueco_float32: contiene también 360 mensajes por topic, pero /distancia y /distancia_filtrada utilizan mensajes Float32 sin cabecera. Espero detectar la interrupción mediante los tiempos de grabación, pero no poder calcular la latencia basada en header.stamp.
 
-Tabla comparativa sano / con fallo (ritmos, latencia, hallazgos): <<RELLENAR>>
+Tabla comparativa sano / con fallo (ritmos, latencia, hallazgos):
 | Característica | mi_sano | mi_hueco | mi_hueco_float32 |
 |---|---|---|---|
 | Tipo de mensaje de distancia | Range | Range | Float32 |
@@ -93,15 +93,30 @@ El problema se clasifica como un fallo de origen aguas arriba que afecta al comp
 La frecuencia media disminuye a 9 Hz porque faltan 40 mensajes, aunque fuera del hueco los mensajes mantienen su periodicidad normal.
 
 Las latencias en el bag Range son pequeñas y similares a las del sistema sano, por lo que no se observa un problema de retraso prolongado.
-**¿Qué no puede medir la herramienta con mensajes sin cabecera (`Float32`)? ¿Por qué?** <<RELLENAR>>
+**¿Qué no puede medir la herramienta con mensajes sin cabecera (`Float32`)? ¿Por qué?**
+Los mensajes `std_msgs/msg/Float32` no contienen el campo `header.stamp`, por lo que la herramienta no puede conocer el momento exacto en que se generó la medición. Por tanto, no puede calcular la latencia entre la generación del dato y su recepción, ni detectar un posible hallazgo `LATENCIA_ALTA` utilizando esa información.
+
+Sin embargo, sí puede detectar interrupciones de comunicación, porque utiliza los instantes de grabación del bag para calcular los intervalos entre mensajes.
+
+Esto se comprueba en nuestros experimentos: tanto `mi_hueco` como `mi_hueco_float32` presentan los hallazgos `HUECOS` y `HUECO_ORIGEN`, con una interrupción de 4,1 segundos. En este fallo concreto no desaparece ningún hallazgo; lo que se pierde es la medición de latencia, que podría revelar otros problemas de frescura de los datos.
+
+Para medir la latencia en un sistema real, utilizaría un tipo de mensaje que incluyese una cabecera temporal, como `sensor_msgs/msg/Range`, o definiría un mensaje personalizado con el valor y una marca temporal de origen. Además, sería necesario garantizar que los relojes utilizados estuvieran sincronizados.
 
 ## Ejercicio 3 — Extensión de la herramienta
 
-Comprobación(es) implementada(s): <<RELLENAR>>
-Decisiones de diseño (¿ERROR o WARN? ¿margen?, ¿qué falsos positivos hay?): <<RELLENAR>>
-Pruebas propias añadidas (nombre y qué comprueban): <<RELLENAR>>
-Salida de `python3 -m unittest -v test_mis_comprobaciones`: <<RELLENAR>>
-Resultado sobre `bags/mi_rango` (antes: TODO_OK; ahora: ...): <<RELLENAR>>
+Comprobación(es) implementada(s): He implementado la función comprobar_rangos(muestras, topic, margen=0.0) en mis_comprobaciones.py. Esta función comprueba si las mediciones de distancia están dentro de los límites min_range y max_range del sensor. Cuando encuentra valores incorrectos, devuelve un único hallazgo RANGO_FUERA, indicando el número de muestras afectadas y el intervalo temporal en el que aparecen. Si todas las muestras son válidas, devuelve una lista vacía.
+
+Decisiones de diseño (¿ERROR o WARN? ¿margen?, ¿qué falsos positivos hay?): He elegido la severidad ERROR porque una medición fuera de los límites declarados del sensor puede provocar decisiones incorrectas en el controlador. El margen por defecto es de 0,0 m, aunque puede ajustarse para admitir tolerancias justificadas. Podrían producirse falsos positivos por ruido, errores de calibración o valores especiales admitidos por determinados sensores. Por ello, en un sistema real revisaría las especificaciones del dispositivo antes de establecer las tolerancias.
+
+Pruebas propias añadidas (nombre y qué comprueban):
+
+test_valores_exactamente_en_los_limites: comprueba que las mediciones iguales a min_range y max_range se consideran válidas.
+
+test_varios_errores_y_intervalo_temporal: comprueba que dos mediciones incorrectas generan un único hallazgo, con severidad ERROR, código RANGO_FUERA, topic correcto y el intervalo temporal correspondiente.
+
+Salida de python3 -m unittest -v test_mis_comprobaciones: Se ejecutaron 11 pruebas en 0,135 segundos. Nueve finalizaron correctamente, ninguna falló y dos fueron omitidas porque corresponden a la ampliación opcional comprobar_frames(). Resultado final: OK (skipped=2).
+
+Resultado sobre bags/mi_rango (antes: TODO_OK; ahora: ...): La herramienta original analiza_bag.py devuelve TODO_OK porque no comprueba los límites físicos del sensor. Sin embargo, nuestra nueva comprobación detecta 20 mediciones fuera de rango en /distancia, entre los segundos 10,10 y 12,00, con el hallazgo RANGO_FUERA y código de salida 1. Al ejecutar la misma comprobación sobre bags/mi_sano, se analizan 400 muestras sin encontrar errores y se obtiene código de salida 0.
 
 ## Ejercicio 4 — Un quinto fallo
 

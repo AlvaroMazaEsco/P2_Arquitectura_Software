@@ -43,14 +43,36 @@ def leer_muestras_range(ruta_bag, topic):
     return out
 
 
-def comprobar_rangos(muestras, topic='', margen=0.0):
-    """TODO (obligatoria o la otra). Devuelve [] si todas las muestras cumplen
-    min_range - margen <= range <= max_range + margen.
 
-    Si alguna no cumple, devuelve UN solo Hallazgo('ERROR', 'RANGO_FUERA', topic, detalle) cuyo detalle diga
-    cuantas muestras fallan (de cuantas) y en que intervalo de tiempo ocurren (t de la primera y de la ultima).
-    """
-    raise NotImplementedError('Ejercicio 3: implementa comprobar_rangos')
+def comprobar_rangos(muestras, topic='', margen=0.0):
+    """Detecta mediciones fuera del rango permitido del sensor."""
+
+    fuera_de_rango = []
+
+    for muestra in muestras:
+        valor = muestra['range']
+        minimo = muestra['min_range'] - margen
+        maximo = muestra['max_range'] + margen
+
+        if valor < minimo or valor > maximo:
+            fuera_de_rango.append(muestra)
+
+    if not fuera_de_rango:
+        return []
+
+    cantidad = len(fuera_de_rango)
+    inicio = min(m['t'] for m in fuera_de_rango)
+    fin = max(m['t'] for m in fuera_de_rango)
+
+    detalle = (
+        f'{cantidad} muestras fuera del rango permitido '
+        f'entre {inicio:.2f} s y {fin:.2f} s'
+    )
+
+    return [
+        Hallazgo('ERROR', 'RANGO_FUERA', topic, detalle)
+    ]
+
 
 
 def comprobar_frames(muestras, topic=''):
