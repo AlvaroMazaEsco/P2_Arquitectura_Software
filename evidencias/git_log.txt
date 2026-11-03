@@ -1,0 +1,13 @@
+* 747c1eb Completa informe, fallo original y evidencias finales de la P2
+* a0788f9 Anade el reto de diagnostico sin revelar su solucion
+| * 4f45957 Corrige el contrato de mi_rango tras detectar el fallo en CI
+| * b487084 Introduce fallo controlado en el contrato de regresion para verificar CI
+|/  
+*   87afcdf Merge pull request #1 from AlvaroMazaEsco/ej3-rango
+|\  
+| * 3a9b43f Implementa deteccion de rangos y pruebas para validar sensores
+|/  
+* 312567e Anade tres bags propios para comparar huecos y mensajes sin cabecera
+* feaef7b Incluye la grafica del caso 5 para documentar el diagnostico
+* 472ba69 Documenta el diagnostico del caso 5 con evidencia de ritmo bajo
+* 327ea75 Inicia la P2 con el kit base para registrar el punto de partida
